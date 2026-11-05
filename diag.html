@@ -15,8 +15,13 @@
 </style>
 </head>
 <body>
-<main><h1>What can this page do on the TV?</h1><div id="out"></div></main>
+<main><h1>What can this page do on the TV? (v5)</h1><div id="out"></div></main>
 <div id="keys">Press any remote button to test it.</div>
+<script>
+window.onerror = function (msg, src, line) {
+  document.body.insertAdjacentHTML('beforeend', '<pre style="color:#ff7a7a;font-size:22px;white-space:pre-wrap">Error: ' + msg + ' (line ' + line + ')</pre>');
+};
+</script>
 <script>
 const TV = '192.168.1.110';
 const out = document.getElementById('out'), keysEl = document.getElementById('keys');
@@ -53,4 +58,34 @@ const probeImg = url => new Promise(res => {
   const f = document.createElement('iframe'); f.style.display = 'none'; document.body.appendChild(f);
   const std = new Set(Object.getOwnPropertyNames(f.contentWindow));
   const extra = Object.getOwnPropertyNames(window).filter(k => !std.has(k));
-  log('info', 'Extra globals: ' + (extra.length ?
+  log('info', 'Extra globals: ' + (extra.length ? extra.join(', ') : 'none'));
+  log('info', 'chrome: ' + typeof window.chrome + ', cast: ' + typeof window.cast + ', serviceWorker: ' + ('serviceWorker' in navigator));
+  try { const s = Date.now(); const r = await timed('https://api.github.com/zen'); log('pass', 'Internet fetch works (HTTP ' + r.status + ', ' + (Date.now() - s) + ' ms)'); }
+  catch (e) { log('fail', 'Internet fetch failed: ' + e.name + ' ' + e.message); }
+  const bases = ['https://127.0.0.1:7345', 'https://' + TV + ':7345', 'https://' + TV + ':9000', 'http://' + TV + ':9000'];
+  for (const b of bases) {
+    const s = Date.now();
+    try {
+      await timed(b + '/', { mode: 'no-cors' }); log('pass', 'Reachable: ' + b);
+      try {
+        const r = await timed(b + '/pairing/start', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ DEVICE_NAME: 'Diag', DEVICE_ID: 'diag' }) });
+        log('pass', 'API works at ' + b + ' (HTTP ' + r.status + ')');
+      } catch (e) { log('fail', 'API blocked at ' + b + ' (' + e.name + ')'); }
+    } catch (e) { log('fail', 'Blocked: ' + b + ' (' + e.name + ', ' + (Date.now() - s) + ' ms)'); }
+    log('info', '   image probe: ' + await probeImg(b));
+  }
+  const D = 'http://' + TV + ':8008', s8 = Date.now();
+  try { await timed(D + '/ssdp/device-desc.xml', { mode: 'no-cors' }); log('pass', 'Cast port reachable: ' + D); }
+  catch (e) { log('fail', 'Cast port blocked: ' + D + ' (' + e.name + ', ' + (Date.now() - s8) + ' ms)'); }
+  try { const r = await timed(D + '/setup/eureka_info?params=name'); log('pass', 'Cast info readable: ' + (await r.text()).slice(0, 80)); }
+  catch (e) { log('fail', 'Cast info not readable (' + e.name + ')'); }
+  for (const a of ['YouTube', 'Netflix', 'Amazon', 'Hulu', 'Disney']) {
+    try { const r = await timed(D + '/apps/' + a); log(r.status === 200 ? 'pass' : 'fail', 'DIAL ' + a + ': HTTP ' + r.status); }
+    catch (e) { log('fail', 'DIAL ' + a + ': not readable (' + e.name + ')'); }
+  }
+  log('info', 'Press OK to try opening YouTube on the TV through the Cast port. Press OK again for Netflix.');
+  log('info', 'Done. Press remote buttons to see their codes. Press Back twice to exit.');
+})();
+</script>
+</body>
+</html>
