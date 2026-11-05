@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV Home</title>
+<style>
+  :root { color-scheme: dark; --bg:#080a0f; --muted:#aeb4c0; --white:#f7f8fb; }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; width:100vw; height:100vh; overflow:hidden; color:var(--white);
+    background: radial-gradient(ellipse at 78% 12%, #26334a 0%, transparent 37%),
+                linear-gradient(125deg,#111722 0%,#090b11 52%,#050609 100%);
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  }
+  .screen { width:100%; height:100%; padding:42px 66px 34px; display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; justify-content:space-between; }
+  .brand { font-size:25px; font-weight:650; letter-spacing:-.7px; }
+  .meta { color:#c1c7d2; font-size:17px; letter-spacing:.2px; }
+  .hero { margin-top:54px; min-height:225px; display:flex; align-items:center; }
+  .hero-copy { max-width:660px; }
+  .eyebrow { color:#c0c9d8; text-transform:uppercase; font-size:13px; letter-spacing:2.6px; font-weight:650; }
+  h1 { font-size:48px; line-height:1.05; margin:13px 0 12px; letter-spacing:-1.8px; font-weight:650; }
+  .sub { color:#c1c7d2; font-size:19px; line-height:1.4; }
+  .section-head { display:flex; align-items:center; justify-content:space-between; margin:20px 0 17px; }
+  h2 { margin:0; font-size:22px; font-weight:600; letter-spacing:-.3px; }
+  .hint { color:#8e98a8; font-size:14px; }
+  .apps { display:grid; grid-template-columns:repeat(4,1fr); gap:17px; }
+  .app {
+    height:112px; border:2px solid transparent; border-radius:17px; display:flex;
+    align-items:center; justify-content:center; flex-direction:column; gap:9px;
+    background:linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.045));
+    box-shadow:0 12px 28px rgba(0,0,0,.22); transition:transform .14s,border-color .14s,background .14s;
+    outline:none;
+  }
+  .app.selected, .app:focus { border-color:#fff; transform:scale(1.055); background:rgba(255,255,255,.19); box-shadow:0 0 0 4px rgba(255,255,255,.13),0 16px 34px rgba(0,0,0,.35); }
+  .logo { font-weight:800; font-size:27px; letter-spacing:-1px; line-height:1; }
+  .name { font-size:15px; color:#e4e7ed; font-weight:550; }
+  .disney .logo { color:#b9d5ff; font-family:Georgia,serif; font-style:italic; }
+  .hulu .logo { color:#5be38c; }
+  .youtube .logo { color:#ff5555; }
+  .appletv .logo { color:#fff; }
+  .max .logo { color:#bba4ff; }
+  .netflix .logo { color:#ff424b; font-size:32px; }
+  .prime .logo { color:#83d5ff; }
+  footer { margin-top:auto; display:flex; justify-content:space-between; color:#7f8998; font-size:13px; }
+  .toast { position:absolute; left:50%; bottom:68px; transform:translate(-50%,18px); opacity:0; pointer-events:none; padding:13px 20px; border-radius:12px; background:rgba(25,29,38,.96); border:1px solid rgba(255,255,255,.18); color:#f3f5f8; font-size:15px; transition:all .2s; }
+  .toast.show { opacity:1; transform:translate(-50%,0); }
+  @media (max-width:900px) {
+    .screen { padding:28px 38px 24px; }
+    .hero { margin-top:28px; min-height:170px; }
+    h1 { font-size:38px; }
+    .apps { gap:12px; }
+    .app { height:95px; }
+  }
+</style>
+</head>
+<body>
+<main class="screen">
+  <header>
+    <div class="brand">TV</div>
+    <div class="meta"><span id="clock">--:--</span> &nbsp;·&nbsp; <span id="date">---</span></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow">Your entertainment</div>
+      <h1>What would you like<br>to watch?</h1>
+      <div class="sub">All your streaming apps, in one place.</div>
+    </div>
+  </section>
+
+  <div class="section-head">
+    <h2>Apps</h2>
+    <div class="hint">Use the arrow keys and Enter</div>
+  </div>
+
+  <section class="apps" id="apps" aria-label="Streaming apps">
+    <div class="app disney selected" tabindex="0" role="button" aria-label="Disney Plus"><div class="logo">Disney+</div><div class="name">Disney+</div></div>
+    <div class="app hulu" tabindex="0" role="button" aria-label="Hulu"><div class="logo">hulu</div><div class="name">Hulu</div></div>
+    <div class="app youtube" tabindex="0" role="button" aria-label="YouTube"><div class="logo">▶</div><div class="name">YouTube</div></div>
+    <div class="app appletv" tabindex="0" role="button" aria-label="Apple TV"><div class="logo">tv</div><div class="name">Apple TV</div></div>
+    <div class="app max" tabindex="0" role="button" aria-label="HBO Max"><div class="logo">max</div><div class="name">HBO Max</div></div>
+    <div class="app netflix" tabindex="0" role="button" aria-label="Netflix"><div class="logo">N</div><div class="name">Netflix</div></div>
+    <div class="app prime" tabindex="0" role="button" aria-label="Prime Video"><div class="logo">prime</div><div class="name">Prime Video</div></div>
+  </section>
+
+  <footer><span>MY TV</span><span>Custom home · Prototype 1</span></footer>
+</main>
+<div class="toast" id="toast">App launching is not connected yet.</div>
+<script>
+(() => {
+  const tiles = [...document.querySelectorAll('.app')];
+  let index = 0;
+  function select(i) {
+    index = (i + tiles.length) % tiles.length;
+    tiles.forEach((tile, n) => {
+      tile.classList.toggle('selected', n === index);
+      tile.setAttribute('aria-pressed', n === index ? 'true' : 'false');
+    });
+  }
+  function activate() {
+    const toast = document.getElementById('toast');
+    toast.textContent = tiles[index].getAttribute('aria-label') + ' selected. Native app launching is the next integration test.';
+    toast.classList.add('show');
+    clearTimeout(window.toastTimer);
+    window.toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+  document.addEventListener('keydown', e => {
+    const cols = 4;
+    if (['ArrowRight','ArrowLeft','ArrowUp','ArrowDown','Enter',' '].includes(e.key)) e.preventDefault();
+    if (e.key === 'ArrowRight') select(index + 1);
+    if (e.key === 'ArrowLeft') select(index - 1);
+    if (e.key === 'ArrowDown') select(index + cols);
+    if (e.key === 'ArrowUp') select(index - cols);
+    if (e.key === 'Enter' || e.key === ' ') activate();
+  });
+  tiles.forEach((tile, i) => {
+    tile.addEventListener('click', () => { select(i); activate(); });
+    tile.addEventListener('focus', () => select(i));
+  });
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+    document.getElementById('date').textContent = now.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'}).toUpperCase();
+  }
+  updateClock(); setInterval(updateClock, 30000);
+  select(0);
+})();
+</script>
+</body>
+</html>
