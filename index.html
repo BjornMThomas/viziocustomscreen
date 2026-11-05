@@ -23,7 +23,7 @@
   .row-head { margin-top:auto; margin-bottom:1.1rem; display:flex; align-items:baseline; justify-content:space-between; }
   .current { font-size:1.9rem; font-weight:600; }
   .keys { color:var(--faint); font-size:1rem; }
-  .apps { display:grid; grid-template-columns:repeat(4,1fr); gap:1.1rem; padding-bottom:1.5rem; }
+  .apps { display:grid; grid-template-columns:repeat(5,1fr); gap:1.1rem; padding-bottom:1.5rem; }
   .app { height:9.2rem; border-radius:.9rem; border:.18rem solid transparent; background:#161a22;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem;
     transition:transform .12s, background .12s, border-color .12s; }
@@ -65,7 +65,7 @@
 const CFG = {
   // Vizio local API. Newer firmware uses 7345, older uses 9000.
   // If the browser blocks the TV's self-signed certificate, point this at a small proxy instead.
-  base: 'https://192.168.1.110:7345',
+  base: '/api',   // served by vizio_proxy.py, which forwards to the TV
   deviceId: 'custom-home',
   deviceName: 'Custom Home'
 };
@@ -79,12 +79,13 @@ const APPS = [
   { name:'HBO Max',     logo:'max',     color:'#b9a2ff', ns:null, id:null },
   { name:'Netflix',     logo:'N',       color:'#ff4d57', ns:3, id:'1'  },   // ?
   { name:'Prime Video', logo:'prime',   color:'#7fd0ff', ns:4, id:'4'  },   // ?
-  { action:'link', name:'Link TV', logo:'⚙', color:'#ffb454' }
+  { action:'link', name:'Link TV', logo:'⚙', color:'#ffb454' },
+  { action:'diag', name:'Diagnostics', logo:'?', color:'#a3abb8' }
 ];
 /* ================================================= */
 
 const $ = id => document.getElementById(id);
-const COLS = 4;
+const COLS = 5;
 let idx = 0, pairing = null, pinVal = '', toastT;
 
 const store = {
@@ -161,7 +162,9 @@ function select(i) {
 }
 function activate() {
   const a = APPS[idx];
-  a.action === 'link' ? startPairing() : launch(a);
+  if (a.action === 'diag') location.href = 'diag.html';
+  else if (a.action === 'link') startPairing();
+  else launch(a);
 }
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
