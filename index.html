@@ -5,128 +5,197 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TV Home</title>
 <style>
-  :root { color-scheme: dark; --bg:#080a0f; --muted:#aeb4c0; --white:#f7f8fb; }
+  /* 1rem = 16px at 1920 wide, scales on 720p/1080p panels */
+  html { font-size: calc(100vw / 120); }
+  :root { color-scheme: dark; --bg:#0a0c10; --ink:#f4f5f7; --dim:#a3abb8; --faint:#6f7886; --accent:#ffb454; }
   * { box-sizing:border-box; }
-  body {
-    margin:0; width:100vw; height:100vh; overflow:hidden; color:var(--white);
-    background: radial-gradient(ellipse at 78% 12%, #26334a 0%, transparent 37%),
-                linear-gradient(125deg,#111722 0%,#090b11 52%,#050609 100%);
-    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
-  }
-  .screen { width:100%; height:100%; padding:42px 66px 34px; display:flex; flex-direction:column; }
-  header { display:flex; align-items:center; justify-content:space-between; }
-  .brand { font-size:25px; font-weight:650; letter-spacing:-.7px; }
-  .meta { color:#c1c7d2; font-size:17px; letter-spacing:.2px; }
-  .hero { margin-top:54px; min-height:225px; display:flex; align-items:center; }
-  .hero-copy { max-width:660px; }
-  .eyebrow { color:#c0c9d8; text-transform:uppercase; font-size:13px; letter-spacing:2.6px; font-weight:650; }
-  h1 { font-size:48px; line-height:1.05; margin:13px 0 12px; letter-spacing:-1.8px; font-weight:650; }
-  .sub { color:#c1c7d2; font-size:19px; line-height:1.4; }
-  .section-head { display:flex; align-items:center; justify-content:space-between; margin:20px 0 17px; }
-  h2 { margin:0; font-size:22px; font-weight:600; letter-spacing:-.3px; }
-  .hint { color:#8e98a8; font-size:14px; }
-  .apps { display:grid; grid-template-columns:repeat(4,1fr); gap:17px; }
-  .app {
-    height:112px; border:2px solid transparent; border-radius:17px; display:flex;
-    align-items:center; justify-content:center; flex-direction:column; gap:9px;
-    background:linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.045));
-    box-shadow:0 12px 28px rgba(0,0,0,.22); transition:transform .14s,border-color .14s,background .14s;
-    outline:none;
-  }
-  .app.selected, .app:focus { border-color:#fff; transform:scale(1.055); background:rgba(255,255,255,.19); box-shadow:0 0 0 4px rgba(255,255,255,.13),0 16px 34px rgba(0,0,0,.35); }
-  .logo { font-weight:800; font-size:27px; letter-spacing:-1px; line-height:1; }
-  .name { font-size:15px; color:#e4e7ed; font-weight:550; }
-  .disney .logo { color:#b9d5ff; font-family:Georgia,serif; font-style:italic; }
-  .hulu .logo { color:#5be38c; }
-  .youtube .logo { color:#ff5555; }
-  .appletv .logo { color:#fff; }
-  .max .logo { color:#bba4ff; }
-  .netflix .logo { color:#ff424b; font-size:32px; }
-  .prime .logo { color:#83d5ff; }
-  footer { margin-top:auto; display:flex; justify-content:space-between; color:#7f8998; font-size:13px; }
-  .toast { position:absolute; left:50%; bottom:68px; transform:translate(-50%,18px); opacity:0; pointer-events:none; padding:13px 20px; border-radius:12px; background:rgba(25,29,38,.96); border:1px solid rgba(255,255,255,.18); color:#f3f5f8; font-size:15px; transition:all .2s; }
-  .toast.show { opacity:1; transform:translate(-50%,0); }
-  @media (max-width:900px) {
-    .screen { padding:28px 38px 24px; }
-    .hero { margin-top:28px; min-height:170px; }
-    h1 { font-size:38px; }
-    .apps { gap:12px; }
-    .app { height:95px; }
-  }
+  body { margin:0; width:100vw; height:100vh; overflow:hidden; background:var(--bg); color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif; }
+  /* 5% overscan-safe margins so nothing is clipped at TV edges */
+  .screen { position:absolute; inset:5vh 5vw; display:flex; flex-direction:column; }
+  .top { display:flex; justify-content:space-between; align-items:center; color:var(--dim); font-size:1.15rem; }
+  .status { display:flex; align-items:center; gap:.6rem; }
+  .dot { width:.7rem; height:.7rem; border-radius:50%; background:var(--faint); }
+  .status.ok .dot { background:#5be38c; }
+  .hero { margin-top:4vh; }
+  .time { font-size:7.5rem; font-weight:300; letter-spacing:-.04em; line-height:1; }
+  .greet { margin-top:.8rem; font-size:1.9rem; color:var(--dim); }
+  .row-head { margin-top:auto; margin-bottom:1.1rem; display:flex; align-items:baseline; justify-content:space-between; }
+  .current { font-size:1.9rem; font-weight:600; }
+  .keys { color:var(--faint); font-size:1rem; }
+  .apps { display:grid; grid-template-columns:repeat(4,1fr); gap:1.1rem; padding-bottom:1.5rem; }
+  .app { height:9.2rem; border-radius:.9rem; border:.18rem solid transparent; background:#161a22;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem;
+    transition:transform .12s, background .12s, border-color .12s; }
+  .app.sel { transform:scale(1.06); border-color:var(--ink); background:#222834; }
+  .app .logo { font-size:2.3rem; font-weight:800; letter-spacing:-.04em; color:var(--c); }
+  .app .name { font-size:1.05rem; color:var(--dim); }
+  .app.sel .name { color:var(--ink); }
+  .app.busy { border-color:var(--accent); }
+  .app.off { opacity:.55; }
+  .toast { position:absolute; left:50%; bottom:7vh; transform:translateX(-50%); background:#1d222c; border:1px solid #3a4252;
+    padding:.9rem 1.5rem; border-radius:.7rem; font-size:1.15rem; opacity:0; transition:opacity .2s; pointer-events:none; max-width:70vw; text-align:center; }
+  .toast.show { opacity:1; }
+  .modal { position:absolute; inset:0; background:rgba(5,6,9,.94); display:none; align-items:center; justify-content:center; flex-direction:column; gap:1.4rem; }
+  .modal.show { display:flex; }
+  .modal h2 { margin:0; font-size:2.2rem; font-weight:600; }
+  .modal p { margin:0; color:var(--dim); font-size:1.25rem; max-width:40rem; text-align:center; line-height:1.4; }
+  .pin { display:flex; gap:.8rem; }
+  .pin b { width:4.2rem; height:5.2rem; border-bottom:.2rem solid var(--faint); font-size:3.2rem; font-weight:500; text-align:center; line-height:5.2rem; }
+  .pin b.on { border-color:var(--accent); }
+  @media (prefers-reduced-motion:reduce) { .app { transition:none; } }
 </style>
 </head>
 <body>
 <main class="screen">
-  <header>
-    <div class="brand">TV</div>
-    <div class="meta"><span id="clock">--:--</span> &nbsp;·&nbsp; <span id="date">---</span></div>
-  </header>
-
-  <section class="hero">
-    <div class="hero-copy">
-      <div class="eyebrow">Your entertainment</div>
-      <h1>What would you like<br>to watch?</h1>
-      <div class="sub">All your streaming apps, in one place.</div>
-    </div>
-  </section>
-
-  <div class="section-head">
-    <h2>Apps</h2>
-    <div class="hint">Use the arrow keys and Enter</div>
-  </div>
-
-  <section class="apps" id="apps" aria-label="Streaming apps">
-    <div class="app disney selected" tabindex="0" role="button" aria-label="Disney Plus"><div class="logo">Disney+</div><div class="name">Disney+</div></div>
-    <div class="app hulu" tabindex="0" role="button" aria-label="Hulu"><div class="logo">hulu</div><div class="name">Hulu</div></div>
-    <div class="app youtube" tabindex="0" role="button" aria-label="YouTube"><div class="logo">▶</div><div class="name">YouTube</div></div>
-    <div class="app appletv" tabindex="0" role="button" aria-label="Apple TV"><div class="logo">tv</div><div class="name">Apple TV</div></div>
-    <div class="app max" tabindex="0" role="button" aria-label="HBO Max"><div class="logo">max</div><div class="name">HBO Max</div></div>
-    <div class="app netflix" tabindex="0" role="button" aria-label="Netflix"><div class="logo">N</div><div class="name">Netflix</div></div>
-    <div class="app prime" tabindex="0" role="button" aria-label="Prime Video"><div class="logo">prime</div><div class="name">Prime Video</div></div>
-  </section>
-
-  <footer><span>MY TV</span><span>Custom home · Prototype 1</span></footer>
+  <div class="top"><div class="status" id="status"><span class="dot"></span><span id="statusText">TV not linked</span></div><div id="date"></div></div>
+  <section class="hero"><div class="time" id="clock"></div><div class="greet" id="greet"></div></section>
+  <div class="row-head"><div class="current" id="current"></div><div class="keys">Arrows to move, OK to open, Back to close</div></div>
+  <section class="apps" id="apps" aria-label="Apps"></section>
 </main>
-<div class="toast" id="toast">App launching is not connected yet.</div>
+<div class="toast" id="toast" role="status"></div>
+<div class="modal" id="modal">
+  <h2>Link this screen to your TV</h2>
+  <p id="modalMsg">Starting pairing…</p>
+  <div class="pin" id="pin"><b></b><b></b><b></b><b></b></div>
+</div>
+
 <script>
-(() => {
-  const tiles = [...document.querySelectorAll('.app')];
-  let index = 0;
-  function select(i) {
-    index = (i + tiles.length) % tiles.length;
-    tiles.forEach((tile, n) => {
-      tile.classList.toggle('selected', n === index);
-      tile.setAttribute('aria-pressed', n === index ? 'true' : 'false');
-    });
+/* ============ CONFIG: edit this part ============ */
+const CFG = {
+  // Vizio local API. Newer firmware uses 7345, older uses 9000.
+  // If the browser blocks the TV's self-signed certificate, point this at a small proxy instead.
+  base: 'https://192.168.1.110:7345',
+  deviceId: 'custom-home',
+  deviceName: 'Custom Home'
+};
+// ns = NAME_SPACE, id = APP_ID for /app/launch. null means the ID still needs to be filled in.
+// Values marked ? are from community lists; confirm them against Vizio's app list for your TV.
+const APPS = [
+  { name:'Disney+',     logo:'Disney+', color:'#8fb8ff', ns:4, id:'75' },   // ?
+  { name:'Hulu',        logo:'hulu',    color:'#5be38c', ns:4, id:'3'  },   // ?
+  { name:'YouTube',     logo:'▶',       color:'#ff5a5a', ns:5, id:'1'  },   // ?
+  { name:'Apple TV',    logo:'tv',      color:'#ffffff', ns:null, id:null },
+  { name:'HBO Max',     logo:'max',     color:'#b9a2ff', ns:null, id:null },
+  { name:'Netflix',     logo:'N',       color:'#ff4d57', ns:3, id:'1'  },   // ?
+  { name:'Prime Video', logo:'prime',   color:'#7fd0ff', ns:4, id:'4'  },   // ?
+  { action:'link', name:'Link TV', logo:'⚙', color:'#ffb454' }
+];
+/* ================================================= */
+
+const $ = id => document.getElementById(id);
+const COLS = 4;
+let idx = 0, pairing = null, pinVal = '', toastT;
+
+const store = {
+  get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+
+/* ---------- Vizio local API ---------- */
+async function vz(method, path, body) {
+  const headers = { 'Content-Type': 'application/json' };
+  const t = store.get('vz_auth');
+  if (t) headers.AUTH = t;
+  const r = await fetch(CFG.base + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  return r.json();
+}
+const linked = () => !!store.get('vz_auth');
+
+async function launch(app) {
+  if (app.id == null) return toast(app.name + ' needs its APP_ID added in the APPS list.');
+  if (!linked()) return toast('Link this screen to your TV first (Link TV tile).');
+  const tile = $('apps').children[idx];
+  tile.classList.add('busy');
+  try {
+    const res = await vz('PUT', '/app/launch', { VALUE: { NAME_SPACE: app.ns, APP_ID: app.id, MESSAGE: 'None' } });
+    const ok = res && res.STATUS && res.STATUS.RESULT === 'SUCCESS';
+    toast(ok ? 'Opening ' + app.name : app.name + ' did not open: ' + (res && res.STATUS ? res.STATUS.RESULT : 'unknown error'));
+  } catch (e) {
+    toast('Could not reach the TV at ' + CFG.base + '. Check the address, or use a proxy.');
   }
-  function activate() {
-    const toast = document.getElementById('toast');
-    toast.textContent = tiles[index].getAttribute('aria-label') + ' selected. Native app launching is the next integration test.';
-    toast.classList.add('show');
-    clearTimeout(window.toastTimer);
-    window.toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+  tile.classList.remove('busy');
+}
+
+async function startPairing() {
+  pinVal = ''; drawPin();
+  $('modal').classList.add('show');
+  $('modalMsg').textContent = 'Asking the TV for a code…';
+  try {
+    const r = await vz('PUT', '/pairing/start', { DEVICE_NAME: CFG.deviceName, DEVICE_ID: CFG.deviceId });
+    if (!r.ITEM) throw 0;
+    pairing = r.ITEM.PAIRING_REQ_TOKEN;
+    $('modalMsg').textContent = 'Type the 4-digit code now showing on your TV, then press OK.';
+  } catch (e) {
+    $('modalMsg').textContent = 'The TV did not answer. Check the address in CFG.base, then press Back and try again.';
   }
-  document.addEventListener('keydown', e => {
-    const cols = 4;
-    if (['ArrowRight','ArrowLeft','ArrowUp','ArrowDown','Enter',' '].includes(e.key)) e.preventDefault();
-    if (e.key === 'ArrowRight') select(index + 1);
-    if (e.key === 'ArrowLeft') select(index - 1);
-    if (e.key === 'ArrowDown') select(index + cols);
-    if (e.key === 'ArrowUp') select(index - cols);
-    if (e.key === 'Enter' || e.key === ' ') activate();
-  });
-  tiles.forEach((tile, i) => {
-    tile.addEventListener('click', () => { select(i); activate(); });
-    tile.addEventListener('focus', () => select(i));
-  });
-  function updateClock() {
-    const now = new Date();
-    document.getElementById('clock').textContent = now.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
-    document.getElementById('date').textContent = now.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'}).toUpperCase();
+}
+async function finishPairing() {
+  if (pinVal.length < 4 || !pairing) return;
+  try {
+    const r = await vz('PUT', '/pairing/pair', { DEVICE_ID: CFG.deviceId, CHALLENGE_TYPE: 1, RESPONSE_VALUE: pinVal, PAIRING_REQ_TOKEN: pairing });
+    if (r.ITEM && r.ITEM.AUTH_TOKEN) {
+      store.set('vz_auth', r.ITEM.AUTH_TOKEN);
+      closeModal(); drawStatus(); toast('TV linked.');
+    } else { pinVal = ''; drawPin(); $('modalMsg').textContent = 'That code did not match. Try again.'; }
+  } catch (e) { $('modalMsg').textContent = 'Pairing failed. Press Back and try again.'; }
+}
+function closeModal() { $('modal').classList.remove('show'); pairing = null; }
+function drawPin() { [...$('pin').children].forEach((b, i) => { b.textContent = pinVal[i] || ''; b.className = i === pinVal.length ? 'on' : ''; }); }
+
+/* ---------- UI ---------- */
+function drawStatus() {
+  $('status').classList.toggle('ok', linked());
+  $('statusText').textContent = linked() ? 'TV linked' : 'TV not linked';
+}
+function build() {
+  $('apps').innerHTML = APPS.map(a =>
+    `<div class="app${a.id === null ? ' off' : ''}" role="button" aria-label="${a.name}" style="--c:${a.color}">
+       <div class="logo">${a.logo}</div><div class="name">${a.name}</div></div>`).join('');
+  [...$('apps').children].forEach((t, i) => t.addEventListener('click', () => { select(i); activate(); }));
+}
+function select(i) {
+  idx = i;
+  [...$('apps').children].forEach((t, n) => t.classList.toggle('sel', n === idx));
+  $('current').textContent = APPS[idx].name;
+}
+function activate() {
+  const a = APPS[idx];
+  a.action === 'link' ? startPairing() : launch(a);
+}
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3200);
+}
+function clock() {
+  const n = new Date(), h = n.getHours();
+  $('clock').textContent = n.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+  $('date').textContent = n.toLocaleDateString([], { weekday:'long', month:'long', day:'numeric' });
+  $('greet').textContent = (h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening') + '. What are you watching?';
+}
+
+const BACK = ['Escape', 'Backspace', 'BrowserBack', 'XF86Back'];
+document.addEventListener('keydown', e => {
+  const k = e.key, code = e.keyCode;
+  if ($('modal').classList.contains('show')) {
+    e.preventDefault();
+    if (/^[0-9]$/.test(k) && pinVal.length < 4) { pinVal += k; drawPin(); }
+    else if (k === 'Backspace' && pinVal) { pinVal = pinVal.slice(0, -1); drawPin(); }
+    else if (k === 'Enter') finishPairing();
+    else if (BACK.includes(k) || code === 10009) closeModal();
+    return;
   }
-  updateClock(); setInterval(updateClock, 30000);
-  select(0);
-})();
+  const n = APPS.length;
+  if (k === 'ArrowRight') select((idx + 1) % n);
+  else if (k === 'ArrowLeft') select((idx - 1 + n) % n);
+  else if (k === 'ArrowDown' && idx + COLS < n) select(idx + COLS);
+  else if (k === 'ArrowUp' && idx - COLS >= 0) select(idx - COLS);
+  else if (k === 'Enter' || k === ' ') activate();
+  else return;
+  e.preventDefault();
+});
+
+build(); select(0); drawStatus(); clock(); setInterval(clock, 15000);
 </script>
 </body>
 </html>
