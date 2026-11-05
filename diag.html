@@ -15,10 +15,11 @@
 </style>
 </head>
 <body>
-<main><h1>What can this page do on the TV? (v5)</h1><div id="out"></div></main>
+<main><h1>What can this page do on the TV? (v7)</h1><div id="out"></div></main>
 <div id="keys">Press any remote button to test it.</div>
 <script>
 window.onerror = function (msg, src, line) {
+  if (window.__quiet) return;
   document.body.insertAdjacentHTML('beforeend', '<pre style="color:#ff7a7a;font-size:22px;white-space:pre-wrap">Error: ' + msg + ' (line ' + line + ')</pre>');
 };
 </script>
@@ -27,12 +28,17 @@ const TV = '192.168.1.110';
 const out = document.getElementById('out'), keysEl = document.getElementById('keys');
 const log = (c, t) => { const d = document.createElement('div'); d.className = 'row ' + c; d.textContent = t; out.appendChild(d); };
 let lastBack = 0, dialN = 0;
-async function dialTry() {
-  const app = ['YouTube', 'Netflix'][dialN++ % 2], u = 'http://' + TV + ':8008/apps/' + app;
-  try {
-    const r = await fetch(u, { method: 'POST', headers: { 'Content-Type': 'text/plain; charset=utf-8' }, body: '' });
-    log(r.status < 300 ? 'pass' : 'fail', app + ' launch answer: HTTP ' + r.status);
-  } catch (e) { log('info', app + ': request sent, reply not readable (' + e.name + '). Did it open?'); }
+function formPost(app) {
+  let fr = document.getElementById('hf');
+  if (!fr) { fr = document.createElement('iframe'); fr.name = 'hf'; fr.id = 'hf'; fr.style.display = 'none'; document.body.appendChild(fr); }
+  const f = document.createElement('form');
+  f.method = 'POST'; f.action = 'http://' + TV + ':8008/apps/' + app; f.target = 'hf'; f.enctype = 'text/plain'; f.rel = 'noreferrer';
+  document.body.appendChild(f); f.submit(); f.remove();
+}
+function dialTry() {
+  const app = ['YouTube', 'Netflix'][dialN++ % 2];
+  formPost(app);
+  log('info', 'Sent launch for ' + app + ' (form post, no referrer). Did it open on the TV?');
 }
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter') dialTry();
@@ -50,6 +56,12 @@ const probeImg = url => new Promise(res => {
   i.onload = () => done('loaded'); i.onerror = () => done('error');
   setTimeout(() => done('timeout'), 6000); i.src = url + '/?' + s;
 });
+const scriptProbe = url => new Promise(res => {
+  const s = Date.now(), el = document.createElement('script');
+  const done = r => { el.remove(); res(r + ' (' + (Date.now() - s) + ' ms)'); };
+  el.onload = () => done('answered OK'); el.onerror = () => done('error, non-OK answer, or blocked');
+  setTimeout(() => done('timeout'), 6000); el.src = url; document.head.appendChild(el);
+});
 
 (async () => {
   log('info', 'Page: ' + location.href);
@@ -60,6 +72,8 @@ const probeImg = url => new Promise(res => {
   const extra = Object.getOwnPropertyNames(window).filter(k => !std.has(k));
   log('info', 'Extra globals: ' + (extra.length ? extra.join(', ') : 'none'));
   log('info', 'chrome: ' + typeof window.chrome + ', cast: ' + typeof window.cast + ', serviceWorker: ' + ('serviceWorker' in navigator));
+  try { const n = (+localStorage.getItem('visits') || 0) + 1; localStorage.setItem('visits', n); log('pass', 'Storage works, visit number ' + n); }
+  catch (e) { log('fail', 'Storage unavailable (' + e.name + ')'); }
   try { const s = Date.now(); const r = await timed('https://api.github.com/zen'); log('pass', 'Internet fetch works (HTTP ' + r.status + ', ' + (Date.now() - s) + ' ms)'); }
   catch (e) { log('fail', 'Internet fetch failed: ' + e.name + ' ' + e.message); }
   const bases = ['https://127.0.0.1:7345', 'https://' + TV + ':7345', 'https://' + TV + ':9000', 'http://' + TV + ':9000'];
@@ -79,10 +93,18 @@ const probeImg = url => new Promise(res => {
   catch (e) { log('fail', 'Cast port blocked: ' + D + ' (' + e.name + ', ' + (Date.now() - s8) + ' ms)'); }
   try { const r = await timed(D + '/setup/eureka_info?params=name'); log('pass', 'Cast info readable: ' + (await r.text()).slice(0, 80)); }
   catch (e) { log('fail', 'Cast info not readable (' + e.name + ')'); }
-  for (const a of ['YouTube', 'Netflix', 'Amazon', 'Hulu', 'Disney']) {
-    try { const r = await timed(D + '/apps/' + a); log(r.status === 200 ? 'pass' : 'fail', 'DIAL ' + a + ': HTTP ' + r.status); }
-    catch (e) { log('fail', 'DIAL ' + a + ': not readable (' + e.name + ')'); }
-  }
+  try { const r = await timed(D + '/ssdp/device-desc.xml'); log('pass', 'Device description: ' + (await r.text()).replace(/\s+/g, ' ').slice(0, 160)); }
+  catch (e) { log('fail', 'Device description not readable (' + e.name + ')'); }
+  window.__quiet = true;
+  for (const a of ['YouTube', 'Netflix', 'Amazon', 'Hulu', 'Disney']) log('info', 'DIAL ' + a + ': ' + await scriptProbe(D + '/apps/' + a));
+  window.__quiet = false;
+  const ports = [80, 3000, 7000, 8008, 8060, 8080, 8443, 56789], hits = [];
+  await Promise.all(ports.map(async p => {
+    const c = new AbortController(), t = setTimeout(() => c.abort(), 2500);
+    try { await fetch('http://' + TV + ':' + p + '/', { mode: 'no-cors', signal: c.signal }); hits.push(p); } catch (e) {}
+    clearTimeout(t);
+  }));
+  log(hits.length ? 'pass' : 'fail', 'Plain-HTTP ports that answered: ' + (hits.length ? hits.sort((a, b) => a - b).join(', ') : 'none'));
   log('info', 'Press OK to try opening YouTube on the TV through the Cast port. Press OK again for Netflix.');
   log('info', 'Done. Press remote buttons to see their codes. Press Back twice to exit.');
 })();
