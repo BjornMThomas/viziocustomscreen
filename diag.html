@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV diagnostic</title>
+<style>
+  html { font-size: calc(100vw / 120); }
+  body { margin:0; background:#0a0c10; color:#f4f5f7; font-family:"Segoe UI",system-ui,Arial,sans-serif; }
+  main { padding:4vh 5vw; }
+  h1 { font-size:2.2rem; margin:0 0 1rem; font-weight:600; }
+  .row { font-size:1.2rem; line-height:1.5; margin:.35rem 0; word-break:break-all; }
+  .pass { color:#5be38c; } .fail { color:#ff7a7a; } .info { color:#a3abb8; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Can this page reach the TV?</h1>
+  <div id="out"></div>
+</main>
+<script>
+const TV = '192.168.1.110';
+const out = document.getElementById('out');
+const log = (cls, text) => { const d = document.createElement('div'); d.className = 'row ' + cls; d.textContent = text; out.appendChild(d); };
+
+function timed(url, opts) {
+  const c = new AbortController(), t = setTimeout(() => c.abort(), 6000);
+  return fetch(url, Object.assign({ signal: c.signal }, opts)).finally(() => clearTimeout(t));
+}
+
+(async () => {
+  log('info', 'Page address: ' + location.href);
+  log('info', 'Browser: ' + navigator.userAgent);
+  const native = Object.keys(window).filter(k => /conjure|vizio|native|bridge|cast|smart|tv|app/i.test(k));
+  log('info', 'Possible native objects: ' + (native.length ? native.join(', ') : 'none found'));
+
+  const bases = [
+    'https://127.0.0.1:7345', 'https://localhost:7345',
+    'https://' + TV + ':7345', 'https://' + TV + ':9000', 'http://' + TV + ':9000'
+  ];
+  for (const b of bases) {
+    // 1) can we reach it at all (reply is hidden, but no error means the TV answered)
+    try { await timed(b + '/', { mode: 'no-cors' }); log('pass', 'Reachable: ' + b); }
+    catch (e) { log('fail', 'Not reachable: ' + b + ' (' + e.name + ')'); continue; }
+    // 2) can we read a real API reply (this starts pairing, so a code may appear on the TV)
+    try {
+      const r = await timed(b + '/pairing/start', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ DEVICE_NAME: 'Diag', DEVICE_ID: 'diag' })
+      });
+      log('pass', 'API works at ' + b + ' (HTTP ' + r.status + ')');
+    } catch (e) { log('fail', 'API blocked at ' + b + ' (' + e.name + ': ' + e.message + ')'); }
+  }
+  log('info', 'Done. Send me every line above.');
+})();
+</script>
+</body>
+</html>
