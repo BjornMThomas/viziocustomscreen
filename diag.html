@@ -23,9 +23,11 @@ const out = document.getElementById('out'), keysEl = document.getElementById('ke
 const log = (c, t) => { const d = document.createElement('div'); d.className = 'row ' + c; d.textContent = t; out.appendChild(d); };
 let lastBack = 0, dialN = 0;
 async function dialTry() {
-  const app = ['YouTube', 'Netflix'][dialN++ % 2];
-  try { await fetch('http://' + TV + ':8008/apps/' + app, { method: 'POST', mode: 'no-cors' }); log('info', 'Sent launch request for ' + app + '. Did it open on the TV?'); }
-  catch (e) { log('fail', 'Could not send ' + app + ' request (' + e.name + ')'); }
+  const app = ['YouTube', 'Netflix'][dialN++ % 2], u = 'http://' + TV + ':8008/apps/' + app;
+  try {
+    const r = await fetch(u, { method: 'POST', headers: { 'Content-Type': 'text/plain; charset=utf-8' }, body: '' });
+    log(r.status < 300 ? 'pass' : 'fail', app + ' launch answer: HTTP ' + r.status);
+  } catch (e) { log('info', app + ': request sent, reply not readable (' + e.name + '). Did it open?'); }
 }
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter') dialTry();
@@ -51,30 +53,4 @@ const probeImg = url => new Promise(res => {
   const f = document.createElement('iframe'); f.style.display = 'none'; document.body.appendChild(f);
   const std = new Set(Object.getOwnPropertyNames(f.contentWindow));
   const extra = Object.getOwnPropertyNames(window).filter(k => !std.has(k));
-  log('info', 'Extra globals: ' + (extra.length ? extra.join(', ') : 'none'));
-  log('info', 'chrome: ' + typeof window.chrome + ', cast: ' + typeof window.cast + ', serviceWorker: ' + ('serviceWorker' in navigator));
-  try { const s = Date.now(); const r = await timed('https://api.github.com/zen'); log('pass', 'Internet fetch works (HTTP ' + r.status + ', ' + (Date.now() - s) + ' ms)'); }
-  catch (e) { log('fail', 'Internet fetch failed: ' + e.name + ' ' + e.message); }
-  const bases = ['https://127.0.0.1:7345', 'https://' + TV + ':7345', 'https://' + TV + ':9000', 'http://' + TV + ':9000'];
-  for (const b of bases) {
-    const s = Date.now();
-    try {
-      await timed(b + '/', { mode: 'no-cors' }); log('pass', 'Reachable: ' + b);
-      try {
-        const r = await timed(b + '/pairing/start', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ DEVICE_NAME: 'Diag', DEVICE_ID: 'diag' }) });
-        log('pass', 'API works at ' + b + ' (HTTP ' + r.status + ')');
-      } catch (e) { log('fail', 'API blocked at ' + b + ' (' + e.name + ')'); }
-    } catch (e) { log('fail', 'Blocked: ' + b + ' (' + e.name + ', ' + (Date.now() - s) + ' ms)'); }
-    log('info', '   image probe: ' + await probeImg(b));
-  }
-  const D = 'http://' + TV + ':8008', s8 = Date.now();
-  try { await timed(D + '/ssdp/device-desc.xml', { mode: 'no-cors' }); log('pass', 'Cast port reachable: ' + D); }
-  catch (e) { log('fail', 'Cast port blocked: ' + D + ' (' + e.name + ', ' + (Date.now() - s8) + ' ms)'); }
-  try { const r = await timed(D + '/setup/eureka_info?params=name'); log('pass', 'Cast info readable: ' + (await r.text()).slice(0, 80)); }
-  catch (e) { log('fail', 'Cast info not readable (' + e.name + ')'); }
-  log('info', 'Press OK to try opening YouTube on the TV through the Cast port. Press OK again for Netflix.');
-  log('info', 'Done. Press remote buttons to see their codes. Press Back twice to exit.');
-})();
-</script>
-</body>
-</html>
+  log('info', 'Extra globals: ' + (extra.length ?
