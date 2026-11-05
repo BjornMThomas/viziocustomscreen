@@ -21,6 +21,7 @@
 <script>
 const TV = '192.168.1.110';
 const out = document.getElementById('out');
+document.addEventListener('keydown', e => { if (['Escape','Backspace','BrowserBack','XF86Back'].includes(e.key) || e.keyCode === 10009) location.href = './'; });
 const log = (cls, text) => { const d = document.createElement('div'); d.className = 'row ' + cls; d.textContent = text; out.appendChild(d); };
 
 function timed(url, opts) {
@@ -51,7 +52,7 @@ function timed(url, opts) {
       log('pass', 'API works at ' + b + ' (HTTP ' + r.status + ')');
     } catch (e) { log('fail', 'API blocked at ' + b + ' (' + e.name + ': ' + e.message + ')'); }
   }
-  log('info', 'Done. Send me every line above.');
+  log('info', 'Done. Send me every line above. Press Back to return home.');
 })();
 </script>
 </body>
