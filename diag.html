@@ -21,8 +21,14 @@
 const TV = '192.168.1.110';
 const out = document.getElementById('out'), keysEl = document.getElementById('keys');
 const log = (c, t) => { const d = document.createElement('div'); d.className = 'row ' + c; d.textContent = t; out.appendChild(d); };
-let lastBack = 0;
+let lastBack = 0, dialN = 0;
+async function dialTry() {
+  const app = ['YouTube', 'Netflix'][dialN++ % 2];
+  try { await fetch('http://' + TV + ':8008/apps/' + app, { method: 'POST', mode: 'no-cors' }); log('info', 'Sent launch request for ' + app + '. Did it open on the TV?'); }
+  catch (e) { log('fail', 'Could not send ' + app + ' request (' + e.name + ')'); }
+}
 document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') dialTry();
   keysEl.textContent = 'Last key: ' + e.key + '   code ' + e.keyCode;
   const back = ['Escape', 'Backspace', 'BrowserBack', 'XF86Back'].includes(e.key) || e.keyCode === 10009;
   if (back) { const n = Date.now(); if (n - lastBack < 1500) location.href = './'; lastBack = n; keysEl.textContent += '   (press again to exit)'; }
@@ -61,6 +67,12 @@ const probeImg = url => new Promise(res => {
     } catch (e) { log('fail', 'Blocked: ' + b + ' (' + e.name + ', ' + (Date.now() - s) + ' ms)'); }
     log('info', '   image probe: ' + await probeImg(b));
   }
+  const D = 'http://' + TV + ':8008', s8 = Date.now();
+  try { await timed(D + '/ssdp/device-desc.xml', { mode: 'no-cors' }); log('pass', 'Cast port reachable: ' + D); }
+  catch (e) { log('fail', 'Cast port blocked: ' + D + ' (' + e.name + ', ' + (Date.now() - s8) + ' ms)'); }
+  try { const r = await timed(D + '/setup/eureka_info?params=name'); log('pass', 'Cast info readable: ' + (await r.text()).slice(0, 80)); }
+  catch (e) { log('fail', 'Cast info not readable (' + e.name + ')'); }
+  log('info', 'Press OK to try opening YouTube on the TV through the Cast port. Press OK again for Netflix.');
   log('info', 'Done. Press remote buttons to see their codes. Press Back twice to exit.');
 })();
 </script>
